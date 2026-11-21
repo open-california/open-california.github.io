@@ -1,0 +1,335 @@
+:root {
+  color-scheme: light dark;
+  --bg: #eef1f5; --fg: #1a1d24; --muted: #5f6673; --card: #ffffff; --border: #e2e6ee;
+  --accent: #2f6fed; --accent-fg: #fff; --track-off: #cdd2dc;
+  --ok: #2e9e5b; --warn: #c99019; --error: #d0453b; --bar: #e6e9f0;
+  --danger: #c0392b;   /* destructive actions (Unpair…); 5.4:1 on --card (WCAG AA) */
+  /* text-only tones for the light theme (>= 4.5:1 on --bg and on the warn tint); borders/fills keep the hues */
+  --ok-text: #1e7a43; --warn-text: #8a5a00; --accent-text: #2459c9;
+  --shadow: 0 1px 2px rgba(20,24,33,.06), 0 8px 24px -16px rgba(20,24,33,.25);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1116; --fg: #eef0f4; --muted: #9aa1b0; --card: #1a1d25; --border: #262a34;
+    --track-off: #363b47; --bar: #262a34; --danger: #f87171;   /* 6.1:1 on --card */
+    --error: #ef6b62;   /* the light red is ~4:1 on the dark bar at the pill's .72rem */
+    --ok-text: var(--ok); --warn-text: var(--warn); --accent-text: var(--accent);   /* 4.7-7.3:1 here */
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -18px rgba(0,0,0,.6);
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; }
+/* Safari: follow the iOS text-size setting (Dynamic Type); other engines drop this line */
+@supports (font: -apple-system-body) { body { font: -apple-system-body; } }
+
+#topbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: .6rem;
+  padding: .9rem 1rem; background: var(--bg); border-bottom: 1px solid var(--border);
+  /* iOS standalone PWA: keep the header clear of the status bar / Dynamic Island. env() is 0
+     in a normal browser, so this only takes effect once installed to the home screen. */
+  padding-top: calc(.9rem + env(safe-area-inset-top));
+  padding-left: calc(1rem + env(safe-area-inset-left));
+  padding-right: calc(1rem + env(safe-area-inset-right)); }
+/* iOS 26+ home-screen app: the system blurs/fades a band just below the status bar (its scroll edge
+   effect) over our content; the title sat inside it (owner screenshot 2026-10-22, iPhone 17 Pro Max).
+   Push the header's content below that band — installed app only (a browser tab is unaffected).
+   ponytail: a fixed +1rem guess, tune it if the band reaches further on another iOS version. */
+@media (display-mode: standalone) {
+  #topbar { padding-top: calc(1.9rem + env(safe-area-inset-top)); }
+}
+#topbar h1 { font-size: 1.15rem; font-weight: 650; margin: 0; min-width: 0; overflow-wrap: anywhere; }   /* large text: wrap, never push ⋮ off-screen */
+/* the heading is focused programmatically on navigation (a11y); don't flash a ring for that,
+   but keep it for genuine keyboard focus. */
+#title:focus:not(:focus-visible) { outline: none; }
+#back { font-size: 1.6rem; line-height: 1; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0 .2rem;
+  min-width: 44px; min-height: 44px; margin: -.6rem 0 -.6rem -.5rem; }   /* 44 px hit area without growing the topbar (C1) */
+.pill { margin-left: auto; font-size: .72rem; color: var(--muted); border: 1px solid var(--border);
+  border-radius: 999px; padding: .15rem .55rem; white-space: nowrap; }
+.pill.ok { color: var(--ok-text); } .pill.busy { color: var(--accent-text); } .pill.error { color: var(--error); }
+
+#app { max-width: 640px; margin: 0 auto; padding: 1rem; display: grid; gap: .8rem;
+  /* respect the side/bottom safe areas too (landscape notch, home indicator) */
+  padding-left: calc(1rem + env(safe-area-inset-left));
+  padding-right: calc(1rem + env(safe-area-inset-right));
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+
+/* dashboard tiles */
+/* two columns, one once large text makes a tile wider than half the row */
+.tilegrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, max(9rem, calc(50% - .4rem))), 1fr)); gap: .8rem; }
+.tile { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1rem;
+  box-shadow: var(--shadow); cursor: pointer; text-align: left; color: inherit; display: grid; gap: .15rem;
+  transition: transform .08s ease; }
+.tile:active { transform: scale(.98); }
+.tile { position: relative; }
+/* a feature with an active fault/alert (cooler door, roof child-lock, ...) */
+.tile.stale { opacity: .55; }   /* the remote hub in LoRa mode: the last WiFi value (hub.js) */
+.tile.alert { border-color: var(--warn-text); box-shadow: 0 0 0 1px var(--warn-text) inset, var(--shadow); }   /* 3:1 on --card */
+.tile .tbadge { position: absolute; top: .5rem; right: .6rem; font-size: 1rem; line-height: 1; }
+.tile .ti { line-height: 1; }
+.tile .ti svg { width: 1.75rem; height: 1.75rem; display: block; }
+.tile .tt { font-weight: 600; margin-top: .3rem; }
+.tile .tv { color: var(--muted); font-size: .9rem; min-height: 1.2em; }
+
+/* cards + rows */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: var(--shadow); padding: .3rem 1rem; }
+.card.summary { margin-bottom: .9rem; }
+.card.sensors { margin-bottom: .9rem; }
+/* Device status: one card per device, named by its heading */
+.card.dcard { margin-bottom: .9rem; }
+.dcard > h2 { font-size: 1rem; margin: .8rem 0 0; }
+.dcard > details { padding: 0 0 .8rem; }
+.dcard summary { padding: .75rem 0; cursor: pointer; }   /* a 44 px target */
+.dcard .btn { min-height: 44px; }
+.dcard > details code { overflow-wrap: anywhere; }
+/* Sensors card (the ESP's ext): name + the owner's alias, the values below; an old reading is
+   muted AND carries the 🕒 marker in its age (app.js renderSensors) */
+.sensor .alias { color: var(--muted); font-size: .8rem; margin-left: .4rem; white-space: nowrap; }
+.sensor .sv { display: block; color: var(--muted); font-size: .88rem; font-variant-numeric: tabular-nums; }
+.sensor .val { align-self: flex-start; white-space: nowrap; }
+.sensor.stale .lbl, .sensor.stale .val { opacity: .6; }
+.card.dim { opacity: .5; }   /* lamp controls disabled until a lighting profile is active */
+.offline { margin-bottom: .9rem; padding: .7rem 1rem; border-radius: 12px; font-size: .9rem;
+  background: color-mix(in srgb, var(--warn) 16%, var(--card)); color: var(--warn-text);
+  border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--border)); }
+/* #conn: the persistent link banner above #app (app.js paintLink); same gutter as #app */
+#conn { margin: 1rem max(calc(1rem + env(safe-area-inset-left)), calc(50% - 320px + 1rem)) 0; }
+#conn:empty { display: none; }
+/* red tint + border; the text stays --fg: --error on the tint is < 4.5:1 in the dark theme */
+.offline.unreachable { background: color-mix(in srgb, var(--error) 16%, var(--card)); color: var(--fg);
+  border-color: color-mix(in srgb, var(--error) 55%, var(--border)); }
+.offline.connecting, .offline.unpaired { background: var(--card); color: var(--muted); border-color: var(--border); }
+#conn.satellite, #conn.rest { margin-bottom: .9rem; padding: .7rem 1rem; border-radius: 12px; font-size: .9rem;
+  background: var(--card); color: var(--muted); border: 1px solid var(--border); }
+#conn.rest .rest-head { display: block; color: var(--fg); margin-bottom: .2rem; }
+#conn.rest .acts { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+#conn.rest .btn { flex: none; min-height: 44px; padding: .6rem .9rem; }
+/* read by screen readers only */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.row { display: flex; align-items: center; gap: 1rem; padding: .8rem 0; }
+.rowwrap { border-top: 1px solid var(--border); }
+.rowwrap:first-child { border-top: 0; }
+.card > .row { border-top: 1px solid var(--border); }
+.card > .row:first-child { border-top: 0; }
+.lbl { flex: 1; }
+/* the wake-up "Vehicle area" row: its label above one checkbox+label line per area */
+.row.areas { flex-direction: column; align-items: stretch; gap: .5rem; }
+.arealist { display: flex; flex-direction: column; gap: .5rem; }
+.arealist label { display: flex; align-items: center; gap: .6rem; cursor: pointer; }
+.arealist input { flex: none; margin: 0; }
+/* lighting: favourite tiles A-D under "All lights" (filled = stored on the unit, "+" = empty) */
+.favs { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem; padding: .2rem 0 .9rem; }
+.fav { aspect-ratio: 1; max-height: 4.5rem; width: 100%; border-radius: 12px; font: inherit; font-size: 1.3rem;
+  font-weight: 650; cursor: pointer; color: var(--muted); background: transparent;
+  border: 2px dashed var(--border); display: flex; align-items: center; justify-content: center; gap: .3rem; }
+.fav.unknown { color: var(--fg); border-style: solid; }   /* the unit has not reported its stored slots yet */
+.fav.filled { color: var(--accent-fg); background: var(--accent); border: 2px solid var(--accent); }
+.fav.filled:active { transform: scale(.97); }
+.fav:disabled { cursor: not-allowed; }
+.fav.filled:disabled { opacity: .5; }
+.fav.pending { opacity: .7; cursor: progress; }
+/* lighting: the collapsible "Functions & settings" section (native <details>) */
+.lfuncs > summary { background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: var(--shadow); padding: .8rem 1rem; cursor: pointer; font-weight: 600; }
+.lfuncs .lfsum { display: block; font-weight: 400; font-size: .85rem; color: var(--muted); }
+.lfuncs .lfsum:empty { display: none; }
+.lfbody { display: grid; gap: .8rem; margin-top: .8rem; }
+/* a control row the current state forbids: grey the label to match the disabled control,
+   so the whole row reads as unavailable (set by renderControl when read-only or c.disabled). */
+.row.ctl-off .lbl, .row.ctl-off .sval { opacity: .5; }
+/* ... and its reason as a full-width line under it (not dimmed: it must stay readable) */
+.row:has(.ctl-why) { flex-wrap: wrap; row-gap: .3rem; }
+.ctl-why { flex-basis: 100%; color: var(--muted); font-size: .88rem; }
+.val { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.ro .val { font-weight: 550; color: var(--fg); }
+
+/* progress bar for percentages */
+.bar { height: 6px; border-radius: 999px; background: var(--bar); margin: 0 0 .7rem; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width .3s ease; }
+
+/* toggle switch */
+.switch { flex: none; width: 52px; height: 31px; border-radius: 999px; background: var(--track-off);
+  position: relative; border: 0; cursor: pointer; transition: background .18s ease; }
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }   /* 44 px hit band */
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 25px; height: 25px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: left .18s ease; }
+.switch[aria-checked="true"]::after { left: 24px; }
+/* pending = in-flight write (still tappable to coalesce): dim + progress cursor.
+   disabled-and-NOT-pending = genuinely unavailable (read-only or a state the app forbids):
+   grey it out and forbid the pointer. */
+.switch:disabled:not(.pending) { opacity: .5; cursor: not-allowed; }
+.switch.pending { opacity: .55; cursor: progress; }
+
+/* slider */
+input[type=range] { flex: 1; accent-color: var(--accent); }
+.sval { min-width: 1.6rem; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* segmented multi-choice + momentary action buttons */
+.segmented { display: inline-flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+.seg { font: inherit; font-size: .82rem; padding: .34rem .62rem; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--card); color: var(--fg); cursor: pointer;
+  min-height: 44px; transition: background .15s ease, color .15s ease, border-color .15s ease; }
+.seg.on { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.seg:disabled { opacity: .5; cursor: not-allowed; }
+
+/* hour <select> + time input + pairing-wizard passkey input */
+.row select, .row input[type=time], .row input[type=text] { font: inherit; margin-left: auto; padding: .3rem .5rem;
+  border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--fg);
+  font-variant-numeric: tabular-nums; }
+.row select, .row input[type=time] { min-height: 44px; }
+.row input[type=time]:disabled, .row select:disabled, input[type=range]:disabled { opacity: .5; cursor: not-allowed; }
+.row input[type=text] { max-width: 8rem; letter-spacing: .15em; }
+label.row { cursor: pointer; }
+
+/* buttons (roof) */
+.btnrow { display: flex; gap: .5rem; padding: .8rem 0; }
+.btn { flex: 1; min-height: 44px; padding: .6rem; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg); color: inherit; cursor: pointer; }
+.btn.danger { color: var(--danger); }   /* Device status: Unpair… */
+#pairing-card { scroll-margin-top: calc(env(safe-area-inset-top) + 4.5rem); }   /* clear the sticky topbar */
+@media (display-mode: standalone) {   /* the taller standalone topbar (see #topbar above); must follow the base rule */
+  #pairing-card { scroll-margin-top: calc(env(safe-area-inset-top) + 5.5rem); }
+}
+.btn:disabled { opacity: .5; cursor: not-allowed; }   /* unavailable (read-only / state-blocked) */
+.btn.pending { cursor: progress; }                     /* in-flight write */
+.warn { color: var(--error); font-size: .85rem; padding: .8rem 0 0; }
+.pill.warn { color: var(--warn-text); font-size: .72rem; padding: .15rem .55rem; }   /* the offline pill keeps its size */
+.note { color: var(--muted); font-size: .88rem; padding: 0 .2rem; }
+
+/* spinner */
+.spinner { flex: none; width: 18px; height: 18px; border: 2px solid var(--track-off);
+  border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* toasts */
+#toasts { position: fixed; left: 50%; bottom: calc(1.2rem + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  display: grid; gap: .5rem; z-index: 20; width: max-content; max-width: 92vw; max-height: 50vh; overflow-y: auto; }
+.toast { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--muted);
+  border-radius: 12px; padding: .7rem 1rem; box-shadow: var(--shadow); font-size: .92rem;
+  animation: rise .2s ease; }
+.toast.ok { border-left-color: var(--ok); } .toast.warn { border-left-color: var(--warn); }
+.toast.error { border-left-color: var(--error); cursor: pointer; display: flex; align-items: center; gap: .5rem; }
+.toast-x { background: none; border: 0; color: var(--muted); font: inherit; min-width: 44px; min-height: 44px;
+  margin: -.7rem -1rem -.7rem auto; cursor: pointer; }
+.toast-x::before { content: "✕"; }   /* drawn, not text: the toast's text stays the message */
+.toast.update { border-left-color: var(--ok); cursor: pointer; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+
+/* Level indicator (Vehicle screen): the app's two gauges — van from the side (pitch) and from the
+   rear (roll) on a fixed scale; the ring and level mark turn green when level. Theme-aware. */
+.lg-wrap { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem 1.25rem; padding: .3rem 0 1rem; }
+.lg-gauge { display: flex; flex-direction: column; align-items: center; gap: .25rem; }
+.lg-svg { width: 150px; height: 150px; display: block; }
+.lg-ring { fill: none; stroke: var(--border); stroke-width: 5; }
+.lg-svg.ok .lg-ring { stroke: var(--ok); }
+.lg-face { fill: var(--bar); }
+.lg-tick { stroke: var(--muted); stroke-width: 1.2; }
+.lg-tick.major { stroke-width: 2.4; }
+.lg-tick.zero { stroke: var(--fg); stroke-width: 3; }
+.lg-svg.ok .lg-tick.zero { stroke: var(--ok); }
+.lg-axis { stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
+.lg-body, .lg-logo { fill: var(--muted); }
+.lg-roof { fill: var(--muted); opacity: .7; }
+.lg-glass { fill: var(--card); opacity: .85; }
+.lg-tyre { fill: #1d2027; stroke: var(--muted); stroke-width: 1; }   /* dark rubber in both themes */
+.lg-light { fill: var(--error); }
+.lg-val { fill: var(--fg); font-size: 15px; font-weight: 600; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.lg-label { font-size: .82rem; color: var(--muted); }
+.lg-hint { font-size: .82rem; color: var(--muted); padding: .1rem 0 .8rem; }
+
+/* Read-only mode banner (daemon rejects writes; the safe default). */
+.readonly { margin-bottom: .9rem; padding: .7rem 1rem; border-radius: 12px; font-size: .9rem;
+  background: color-mix(in srgb, var(--muted) 14%, var(--card)); color: var(--muted);
+  border: 1px solid var(--border); }
+
+/* Warning banner — untested firmware / plausibility-anchor violations (possible decode drift). */
+.fwwarn { margin-bottom: .9rem; padding: .7rem 1rem; border-radius: 12px; font-size: .85rem;
+  background: color-mix(in srgb, var(--warn) 14%, var(--card)); color: var(--warn-text);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border)); }
+
+/* inferred/unverified lamp identity marker on the Lighting screen */
+.lamp-hint { margin-left: .5rem; font-size: .68rem; font-weight: 400; color: var(--muted);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0 .3rem; vertical-align: middle; }
+
+/* persistent-session status pill (read-only) */
+.session-pill { display: inline-block; font-size: .72rem; color: var(--muted); font-family: inherit;
+  background: none; border: 1px solid var(--border); border-radius: 999px; padding: .1rem .6rem;
+  margin-bottom: .6rem; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  justify-self: start; }   /* a grid child of #app: do not stretch to a full-width banner */
+.session-pill:disabled { opacity: .5; cursor: default; }
+.session-pill.ok { color: var(--ok-text); border-color: color-mix(in srgb, var(--ok) 40%, var(--border)); }
+.session-pill.busy { color: var(--accent-text); }
+
+/* calm the motion when the user asks for it; the spinner slows but keeps turning (it means "busy") */
+@media (prefers-reduced-motion: reduce) {
+  .tile, .bar .fill, .switch, .switch::after, .seg { transition: none; }
+  .tile:active, .fav.filled:active { transform: none; }
+  .toast { animation: none; }
+  .spinner { animation-duration: 2s; }
+}
+
+#menu { font-size: 1.4rem; line-height: 1; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0;
+  min-width: 44px; min-height: 44px; margin: -.6rem -.5rem -.6rem 0; }   /* 44 px hit area without growing the topbar */
+/* the tappable status pill: 44 px tall hit area via ::after (topbar keeps its height); no
+   horizontal extension, so >= 8 px stays between its hit area and the ⋮ button's */
+button.pill { position: relative; background: none; font-family: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button.pill::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+/* fixed + top set from the topbar's bottom edge in app.js (that edge includes the safe-area inset) */
+.menupop { position: fixed; right: calc(.4rem + env(safe-area-inset-right)); z-index: 40; background: var(--card, #fff); border: 1px solid rgba(128,128,128,.35); border-radius: .5rem; box-shadow: 0 4px 14px rgba(0,0,0,.25); padding: .25rem; display: flex; flex-direction: column; min-width: 11rem; }
+.menupop button { background: none; border: 0; font: inherit; color: inherit; text-align: left; padding: .5rem .7rem; min-height: 44px; border-radius: .35rem; cursor: pointer; }
+.menupop button + button { border-top: 1px solid var(--border); border-radius: 0; }
+.menupop button:hover { background: rgba(128,128,128,.15); }
+.menupop [role="separator"] { height: 0; border-top: 1px solid rgba(128,128,128,.45); margin: .3rem 0; }
+
+/* per-screen Help sheet (⋮ → Help, #314) — a native modal <dialog> */
+dialog.help { max-width: min(32rem, calc(100vw - 2rem)); max-height: 85vh; overflow: auto; padding: 1rem 1.1rem;
+  background: var(--card); color: var(--fg); border: 1px solid var(--border); border-radius: 16px; }
+dialog.help::backdrop { background: rgba(0,0,0,.45); }
+dialog.help h2 { font-size: 1.05rem; margin: 0 0 .6rem; }
+dialog.help p { font-size: .92rem; line-height: 1.45; margin: 0 0 .7rem; }
+dialog.help a { display: block; margin: .2rem 0 .9rem; color: var(--accent); }
+
+/* Satellite settings + WiFi setup (app.js renderSat): forms, 44 px switches and buttons */
+.sat { display: grid; gap: .8rem; }
+.sat .card.dcard { margin: 0; padding-bottom: .2rem; }
+.sat > h2.sec { font-size: 1rem; margin: .6rem .2rem 0; color: var(--muted); }
+.sat h3 { font-size: .95rem; margin: .8rem 0 .2rem; }
+.sat label:not(.row):not(.lbl) { display: block; margin: .7rem 0 .3rem; color: var(--muted); font-size: .9rem; }
+.sat select, .sat input:not([type=checkbox]) { width: 100%; min-height: 44px; font: inherit; padding: .45rem .6rem;
+  border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--fg); }
+.sat .row select { width: auto; max-width: 60%; }
+.sat .row input[type=text] { max-width: none; letter-spacing: normal; }
+.sat input[type=checkbox] { width: 22px; height: 22px; margin: 0; }
+.sat .switch { width: 65px; height: 44px; border: 6.5px solid transparent; background-clip: padding-box; }
+.sat .btn { min-height: 44px; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.sat .step { display: flex; gap: .5rem; }
+.sat .step .btn { flex: none; width: 48px; font-size: 1.2rem; }
+.sat .srow { flex-wrap: wrap; gap: .4rem 1rem; }
+.sat .srow + .srow { border-top: 1px solid var(--border); }
+.sat .acts { display: flex; flex-wrap: wrap; gap: .5rem; margin-left: auto; }
+.sat .acts.open { flex-basis: 100%; }
+.sat .acts.open > span, .sat .acts.open > input { flex-basis: 100%; }
+.sat .acts > .btn { flex: 1 1 6em; }
+.sat .warn:empty, .sat .note:empty { padding: 0; margin: 0; }
+.sat p { overflow-wrap: anywhere; }
+.sat [hidden] { display: none !important; }   /* .btnrow/.row set display: hidden must still win */
+.sat .srow > .lbl { flex: 1 1 14em; }        /* narrow: the buttons wrap under the sensor's line */
+.sat .srow > .acts { flex: 1 1 12em; justify-content: flex-end; }
+
+/* cabin thermostat card (Air heater, satellite) */
+.thermo-h { margin: 0; padding: .8rem 0 .2rem; font-size: 1rem; }
+.thermo .big { font-size: 1.6rem; font-weight: 650; }
+.thermo-step { min-width: 44px; min-height: 44px; font-size: 1.3rem; }
+.thermo-line { padding: .2rem 0 .6rem; }
+.thermo-hint { padding: .2rem 0 .6rem; }
+.thermo-hint .linkbtn { min-height: 44px; padding: 0; font: inherit; font-weight: 600; color: var(--accent-text);
+  background: none; border: 0; cursor: pointer; text-align: left; }
+.thermo-open { width: 100%; min-height: 44px; font: inherit; color: var(--accent-text); background: none; border: 0;
+  border-top: 1px solid var(--border); text-align: left; cursor: pointer; }
+.thermo-sheet { border-top: 1px solid var(--border); padding-top: .4rem; }
+.thermo-opt { min-height: 44px; padding: .3rem 0; }
+.thermo-opt.stale, .thermo-opt.stale .sval { color: var(--warn-text); }
+.thermo-opt input:disabled ~ .lbl { opacity: .8; }

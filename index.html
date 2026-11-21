@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://*.thethings.network https://*.thethings.industries wss://b5501e06.ala.eu-central-1.emqxsl.com:8084; img-src 'self' data: blob:; worker-src 'self' blob:; script-src 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Open California</title>
+<link rel="stylesheet" href="/app.css">
+<!-- Installable web app (Add to Home Screen). The offline shell (sw.js, registered by app.js) needs
+     HTTPS: only the tailnet fronts get it; plain http on the LAN is the installable-fullscreen subset. -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#12395c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="OC Remote">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+</head>
+<body>
+<header id="topbar">
+  <button id="back" hidden aria-label="Back">‹</button>
+  <h1 id="title" tabindex="-1">Open California</h1>
+  <button id="status" type="button" class="pill" aria-label="Device status">…</button>
+  <button id="menu" aria-label="Menu" aria-haspopup="menu" aria-expanded="false">⋮</button>
+</header>
+<div id="conn" role="status" aria-live="polite"></div>
+<main id="app"></main>
+<div id="toasts" aria-live="polite" role="status"></div>
+<div id="sr-status" class="sr-only" aria-live="polite" role="status"></div>
+<script src="/remote-flag.js"></script>
+<script src="/strings.de.js"></script>
+<script src="/semantics_tables.js"></script>
+<script src="/semantics.js"></script>
+<script src="/strings.remote.de.js"></script>
+<script src="/vendor/qr-scanner/qr-scanner.umd.min.js"></script>
+<script src="/lora_setup.js"></script>
+<script src="/ttn.js"></script>
+<script src="/lora_decode.js"></script>
+<script src="/remote.js"></script>
+<script src="/vendor/mqtt/mqtt.min.js"></script>
+<script src="/hub.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
